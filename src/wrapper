@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+
+# Normalize SNAP path for Fedora and other distros
+SNAP=$(echo "$SNAP" | sed -e 's|/var/lib/snapd||g')
+
+# Detect host architecture and set WINEARCH
+case "$SNAP_ARCH" in
+  amd64)
+    export WINEARCH="win64"
+    ;;
+  i386)
+    export WINEARCH="win32"
+    ;;
+  *)
+    echo "Unsupported host architecture: $SNAP_ARCH" >&2
+    exit 1
+    ;;
+esac
+
+# Set Wine prefix and DLL overrides
+export WINEPREFIX="$SNAP_USER_COMMON/.wine"
+export WINEDLLOVERRIDES="mscoree,mshtml="
+
+# Unpack .NET prefix on first run and initialize prefix
+if [ ! -d "$WINEPREFIX/drive_c" ]; then
+  mkdir -p "$WINEPREFIX"
+  tar -xJf "$SNAP/prefix/dotnetpfx.tar.xz" -C "$WINEPREFIX"
+  # Initialize Wine prefix (registry, drives, etc.)
+  exec wineboot -r
+fi
+
+# Ensure Winbox executable is in the prefix (from SNAP prefix)
+WINBOX_EXE="$WINEPREFIX/drive_c/Program Files/Winbox/winbox.exe"
+if [ ! -f "$WINBOX_EXE" ]; then
+  mkdir -p "$(dirname "$WINBOX_EXE")"
+  cp "$SNAP/usr/libexec/winbox64.exe" "$WINBOX_EXE"
+fi
+
+# Launch Winbox via Sommelier
+exec wine "$WINBOX_EXE" "${@:1}"

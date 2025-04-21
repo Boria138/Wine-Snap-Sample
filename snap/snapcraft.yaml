@@ -1,0 +1,166 @@
+name: winbox
+base: core22
+version: '3.41'
+summary: small utility that allows administration of MikroTik RouterOS
+icon: snap/gui/icon.png
+description: |
+  Winbox is a small utility that allows administration of MikroTik RouterOS using a fast and simple GUI.
+
+grade: stable
+confinement: strict
+compression: lzo
+
+architectures:
+  - build-on: amd64
+
+plugs:
+  icon-themes:
+    interface: content
+    target: $SNAP/data-dir/icons
+    default-provider: gtk-common-themes
+
+  gtk-3-themes:
+    interface: content
+    target: $SNAP/data-dir/themes
+    default-provider: gtk-common-themes
+
+  # WINE runtime
+  wine-runtime-c22:
+    interface: content
+    target: $SNAP/wine-runtime
+    default-provider: wine-platform-runtime-core22
+  wine-9-stable:
+    interface: content
+    target: $SNAP/wine-platform
+    default-provider: wine-platform-9-stable-core22
+
+parts:
+  # The sommelier script helps you snap Windows applications using Wine. It
+  # initializes and configures Wine and installs the Windows application.
+  sommelier:
+    plugin: make
+    source: https://github.com/snapcrafters/sommelier-core.git
+    # WORKAROUND: The 1.0 branch isn't buildable on core22
+    # https://github.com/snapcrafters/sommelier-core/issues/48
+    source-branch: master
+    build-packages:
+      - libc6-dev-i386
+      - gcc-multilib
+    stage-packages:
+      - xdg-user-dirs
+
+  winbox:
+    plugin: dump
+    source: .
+    stage:
+      - usr
+    stage-packages:
+      - libfreetype6
+    build-packages:
+      - wget
+      - tar
+    override-build: |
+
+      # 1) Скачиваем готовый .NET‑префикс
+      wget -O dotnetpfx.tar.xz \
+        "https://github.com/Castro-Fidel/PortWINE/releases/download/dotpfx48v7/dotpfx48v7.tar.xz"
+
+      # 2) Кладём архив в приватную папку внутри snap
+      mkdir -p $SNAPCRAFT_PART_INSTALL/prefix
+      mv dotnetpfx.tar.xz $SNAPCRAFT_PART_INSTALL/prefix/
+
+      # 3) Скачиваем winbox64.exe
+      wget -O winbox64.exe \
+        "https://download.mikrotik.com/routeros/winbox/${SNAPCRAFT_PROJECT_VERSION}/winbox64.exe"
+
+      # 4) Устанавливаем winbox64.exe в libexec
+      mkdir -p $SNAPCRAFT_PART_INSTALL/usr/libexec
+      mv winbox64.exe $SNAPCRAFT_PART_INSTALL/usr/libexec/winbox64.exe
+
+      # 5) Устанавливаем ваш готовый wrapper
+      mkdir -p $SNAPCRAFT_PART_INSTALL/bin
+      install -m0755 src/wrapper $SNAPCRAFT_PART_INSTALL/bin/winbox
+
+apps:
+  winbox:
+    command: winbox
+    desktop: snap/gui/winbox.desktop
+    autostart: winbox.desktop
+    extensions: [gnome-3-38]
+    environment:
+      NO_AT_BRIDGE: "1"
+      HOME: $SNAP_USER_COMMON
+      TMPDIR: $XDG_RUNTIME_DIR
+      XDG_CURRENT_DESKTOP: Unity
+      DISABLE_WAYLAND: "1"
+    plugs:
+      - opengl
+      - desktop
+      - home
+      - network
+      - network-bind
+      - network-observe
+      - wayland
+      - icon-themes
+      - removable-media
+      - x11
+      - audio-playback
+
+
+  # The wine command can be used to run applications inside the wine
+  # environment that this snap uses.
+  #
+  # For example, users can configure the wine environment of this snap
+  # by running `myapp.wine winecfg`.
+  wine:
+    extensions:
+      - gnome
+    command: bin/sommelier
+    plugs:
+      # Graphical resources access
+      - desktop
+      - desktop-legacy
+      - x11
+      - unity7
+      - wayland
+
+      # For debugging
+      - network
+
+      # For wineserver functionality
+      - network-bind
+
+  # The winetricks command can be used to run winetricks inside the wine
+  # environment that this snap uses.
+  winetricks:
+    extensions:
+      - gnome
+    command: bin/sommelier winetricks
+    plugs:
+      # Graphical resources access
+      - desktop
+      - desktop-legacy
+      - x11
+      - unity7
+      - wayland
+
+      # For winetricks functionality
+      - network
+
+      # For wineserver functionality
+      - network-bind
+
+  wineboot:
+    extensions:
+      - gnome
+    command: bin/sommelier wineboot
+    plugs:
+      # Graphical resources access
+      - desktop
+      - desktop-legacy
+      - x11
+      - unity7
+      - wayland
+
+      # For wineserver functionality
+      - network-bind
