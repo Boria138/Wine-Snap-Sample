@@ -24,17 +24,27 @@ export WINEDLLOVERRIDES="mscoree,mshtml="
 # Unpack .NET prefix on first run and initialize prefix
 if [ ! -d "$WINEPREFIX/drive_c" ]; then
   mkdir -p "$WINEPREFIX"
-  tar -xJf "$SNAP/usr/libexec/prefix/dotnetpfx.tar.xz" -C "$WINEPREFIX"
+  yad --width=300 --center --title="Winbox Snap" \
+      --text="Идёт начальная настройка среды Wine...\nПожалуйста, подождите." \
+      --no-buttons --undecorated --on-top &
+  YAD_PID=$!
+  tar -xJf "$SNAP/usr/libexec/winbox/prefix/dotnetpfx.tar.xz" -C "$WINEPREFIX"
   # Initialize Wine prefix (registry, drives, etc.)
-  exec wineboot -r
+  wine64 wineboot -r
+  kill "$YAD_PID"
 fi
 
 # Ensure Winbox executable is in the prefix (from SNAP prefix)
 WINBOX_EXE="$WINEPREFIX/drive_c/Program Files/Winbox/winbox.exe"
 if [ ! -f "$WINBOX_EXE" ]; then
   mkdir -p "$(dirname "$WINBOX_EXE")"
-  cp "$SNAP/usr/libexec/winbox64.exe" "$WINBOX_EXE"
+  cp "$SNAP/usr/libexec/winbox/winbox64.exe" "$WINBOX_EXE"
 fi
 
-# Launch Winbox via Sommelier
-exec wine "$WINBOX_EXE" "${@:1}"
+if [ "$1" == "winecfg" ]; then
+  wine64 winecfg
+elif [ "$1" == "winetricks" ] ; then
+  winetricks
+else
+  ${SNAP}/bin/sommelier "$WINBOX_EXE"
+fi

@@ -6,6 +6,8 @@ icon: snap/gui/icon.png
 description: |
   Winbox is a small utility that allows administration of MikroTik RouterOS using a fast and simple GUI.
 
+  Snap conatins Wine runtime and winbox client.
+
 grade: stable
 confinement: strict
 compression: lzo
@@ -14,6 +16,16 @@ architectures:
   - build-on: amd64
 
 plugs:
+  wine-runtime-c22:
+    interface: content
+    target: $SNAP/wine-runtime
+    default-provider: wine-platform-runtime-core22
+
+  wine-9-stable:
+    interface: content
+    target: $SNAP/wine-platform
+    default-provider: wine-platform-9-stable-core22
+
   icon-themes:
     interface: content
     target: $SNAP/data-dir/icons
@@ -21,44 +33,25 @@ plugs:
 
   gtk-3-themes:
     interface: content
-    target: $SNAP/data-dir/themes
     default-provider: gtk-common-themes
-
-  # WINE runtime
-  wine-runtime-c22:
-    interface: content
-    target: $SNAP/wine-runtime
-    default-provider: wine-platform-runtime-core22
-  wine-9-stable:
-    interface: content
-    target: $SNAP/wine-platform
-    default-provider: wine-platform-9-stable-core22
+    target: $SNAP/data-dir/themes
 
 parts:
-  # The sommelier script helps you snap Windows applications using Wine. It
-  # initializes and configures Wine and installs the Windows application.
-  sommelier:
-    plugin: make
-    source: https://github.com/snapcrafters/sommelier-core.git
-    # WORKAROUND: The 1.0 branch isn't buildable on core22
-    # https://github.com/snapcrafters/sommelier-core/issues/48
-    source-branch: master
-    build-packages:
-      - libc6-dev-i386
-      - gcc-multilib
-    stage-packages:
-      - xdg-user-dirs
-
   winbox:
-    plugin: dump
     source: .
+    plugin: dump
     stage:
       - usr
     stage-packages:
+      - yad
       - libfreetype6
+      - cabextract
+      - unzip
+      - shared-mime-info
     build-packages:
       - wget
       - tar
+      - xz-utils
     override-build: |
 
       # 1) Скачиваем готовый .NET‑префикс (PortProton исключительно в пример, можно взять свой)
@@ -66,17 +59,27 @@ parts:
         "https://github.com/Castro-Fidel/PortWINE/releases/download/dotpfx48v7/dotpfx48v7.tar.xz"
 
       # 2) Кладём архив в libexec
-      install -o root -D dotnetpfx.tar.xz $SNAPCRAFT_PRIME/usr/libexec/prefix/dotnetpfx.tar.xz
+      install -o root -D dotnetpfx.tar.xz $SNAPCRAFT_PRIME/usr/libexec/winbox/prefix/dotnetpfx.tar.xz
 
       # 3) Скачиваем winbox64.exe (Тоже исключительно пример в идеале exe будет прям в префиксе не откуда отдельно её брать не надо)
       wget -O winbox64.exe \
         "https://download.mikrotik.com/routeros/winbox/${SNAPCRAFT_PROJECT_VERSION}/winbox64.exe"
 
       # 4) Устанавливаем winbox64.exe в libexec
-      install -o root -D winbox64.exe $SNAPCRAFT_PRIME/usr/libexec/winbox64.exe
+      install -o root -D winbox64.exe $SNAPCRAFT_PRIME/usr/libexec/winbox/winbox64.exe
 
       # 5) Устанавливаем wrapper (Надо будет переписать с учётом того что exe будет в префиксе)
       install -o root -D src/wrapper $SNAPCRAFT_PRIME/winbox
+
+  sommelier-core:
+    plugin: make
+    source: https://github.com/snapcrafters/sommelier-core.git
+    source-branch: "master"
+    build-packages:
+      - libc6-dev-i386
+      - gcc-multilib
+    stage-packages:
+      - xdg-user-dirs
 
 apps:
   winbox:
@@ -87,78 +90,36 @@ apps:
       - gnome
     environment:
       NO_AT_BRIDGE: "1"
+      WINEPREFIX: "$SNAP_USER_COMMON/.wine"
+      LC_ALL: "C.UTF-8"
       HOME: $SNAP_USER_COMMON
       TMPDIR: $XDG_RUNTIME_DIR
       XDG_CURRENT_DESKTOP: Unity
-      DISABLE_WAYLAND: "1"
+      DISABLE_WAYLAND: 1
     plugs:
-      - opengl
-      - desktop
+      # Regular file access
       - home
-      - network
-      - network-bind
-      - network-observe
-      - wayland
-      - icon-themes
       - removable-media
-      - x11
-      - audio-playback
 
-
-  # The wine command can be used to run applications inside the wine
-  # environment that this snap uses.
-  #
-  # For example, users can configure the wine environment of this snap
-  # by running `myapp.wine winecfg`.
-  wine:
-    extensions:
-      - gnome
-    command: bin/sommelier
-    plugs:
       # Graphical resources access
       - desktop
       - desktop-legacy
       - x11
       - unity7
+      - unity8
       - wayland
+      - gsettings
+      - polkit
 
-      # For debugging
-      - network
-
-      # For wineserver functionality
-      - network-bind
-
-  # The winetricks command can be used to run winetricks inside the wine
-  # environment that this snap uses.
-  winetricks:
-    extensions:
-      - gnome
-    command: bin/sommelier winetricks
-    plugs:
-      # Graphical resources access
-      - desktop
-      - desktop-legacy
-      - x11
-      - unity7
-      - wayland
+      # Graphics hardware access
+      - opengl
 
       # For winetricks functionality
       - network
 
       # For wineserver functionality
       - network-bind
+      - network-observe
 
-  wineboot:
-    extensions:
-      - gnome
-    command: bin/sommelier wineboot
-    plugs:
-      # Graphical resources access
-      - desktop
-      - desktop-legacy
-      - x11
-      - unity7
-      - wayland
-
-      # For wineserver functionality
-      - network-bind
+      # Playing notification sound
+      - audio-playback
