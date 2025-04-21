@@ -54,6 +54,9 @@ parts:
     source: .
     stage:
       - usr
+    stage-packages:
+      - libfreetype6
+
     build-packages:
       - wget
       - tar
