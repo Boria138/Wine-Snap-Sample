@@ -65,21 +65,18 @@ parts:
       wget -O dotnetpfx.tar.xz \
         "https://github.com/Castro-Fidel/PortWINE/releases/download/dotpfx48v7/dotpfx48v7.tar.xz"
 
-      # 2) Кладём архив в приватную папку внутри snap
-      mkdir -p $SNAPCRAFT_PART_INSTALL/prefix
-      mv dotnetpfx.tar.xz $SNAPCRAFT_PART_INSTALL/prefix/
+      # 2) Кладём архив в libexec
+      install -o root -D dotnetpfx.tar.xz $SNAPCRAFT_PRIME/usr/libexec/prefix/dotnetpfx.tar.xz
 
       # 3) Скачиваем winbox64.exe
       wget -O winbox64.exe \
         "https://download.mikrotik.com/routeros/winbox/${SNAPCRAFT_PROJECT_VERSION}/winbox64.exe"
 
       # 4) Устанавливаем winbox64.exe в libexec
-      mkdir -p $SNAPCRAFT_PART_INSTALL/usr/libexec
-      mv winbox64.exe $SNAPCRAFT_PART_INSTALL/usr/libexec/winbox64.exe
+      install -o root -D winbox64.exe $SNAPCRAFT_PRIME/usr/libexec/winbox64.exe
 
       # 5) Устанавливаем ваш готовый wrapper
-      mkdir -p $SNAPCRAFT_PART_INSTALL/bin
-      install -m0755 src/wrapper $SNAPCRAFT_PART_INSTALL/bin/winbox
+      install -o root -D src/wrapper $SNAPCRAFT_PRIME/winbox
 
 apps:
   winbox:

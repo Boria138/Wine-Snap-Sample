@@ -24,7 +24,7 @@ export WINEDLLOVERRIDES="mscoree,mshtml="
 # Unpack .NET prefix on first run and initialize prefix
 if [ ! -d "$WINEPREFIX/drive_c" ]; then
   mkdir -p "$WINEPREFIX"
-  tar -xJf "$SNAP/prefix/dotnetpfx.tar.xz" -C "$WINEPREFIX"
+  tar -xJf "$SNAP/usr/libexec/prefix/dotnetpfx.tar.xz" -C "$WINEPREFIX"
   # Initialize Wine prefix (registry, drives, etc.)
   exec wineboot -r
 fi
