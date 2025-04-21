@@ -86,7 +86,8 @@ apps:
     command: winbox
     desktop: snap/gui/winbox.desktop
     autostart: winbox.desktop
-    extensions: [gnome-3-38]
+    extensions:
+      - gnome
     environment:
       NO_AT_BRIDGE: "1"
       HOME: $SNAP_USER_COMMON
