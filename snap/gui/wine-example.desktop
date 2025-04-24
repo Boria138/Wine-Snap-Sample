@@ -1,18 +1,14 @@
 [Desktop Entry]
 Categories=Utility;
 StartupWMClass=winbox.exe
-Comment[en_US]=winbox Client
-Comment=winbox Client
-GenericName[en_US]=WinBox
-GenericName=WinBox
 Icon=${SNAP}/meta/gui/icon.png
-Exec=winbox
-Name[en_US]=WinBox
-Name=WinBox
+Exec=wine-example
+Name[en_US]=wine-example
+Name=wine-example
 X-DBUS-StartupType=multi
 X-KDE-SubstituteUID=false
 X-SnapInstanceName=winbox
-Keywords=winebox;mikrotik;
+Keywords=wine;
 StartupNotify=false
 Terminal=false
 Type=Application

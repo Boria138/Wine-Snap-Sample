@@ -24,15 +24,41 @@ export WINEDLLOVERRIDES="mscoree,mshtml="
 # Unpack .NET prefix on first run and initialize prefix
 if [ ! -d "$WINEPREFIX/drive_c" ]; then
   mkdir -p "$WINEPREFIX"
-  yad --width=300 --center --title="Winbox Snap" \
-      --text="Идёт начальная настройка среды Wine...\nПожалуйста, подождите." \
-      --no-buttons --undecorated --on-top &
-  YAD_PID=$!
-  tar -xJf "$SNAP/usr/libexec/winbox/prefix/dotnetpfx.tar.xz" -C "$WINEPREFIX"
-  # Initialize Wine prefix (registry, drives, etc.)
-  wine64 wineboot -r
-  kill "$YAD_PID"
+
+  (
+    echo "10" ; sleep 0.2
+    echo "# Распаковка архива..." ; sleep 0.5
+
+    TMPDIR=$(mktemp -d)
+    tar -xJf "$SNAP/usr/libexec/winbox/prefix/dotnetpfx.tar.xz" -C "$TMPDIR"
+    echo "40" ; sleep 0.2
+
+    # Найти директорию, содержащую drive_c (префикс)
+    FOUND_PREFIX=$(find "$TMPDIR" -type d -name drive_c | head -n1 | xargs dirname)
+    echo "# Поиск структуры префикса..." ; sleep 0.5
+    echo "60" ; sleep 0.2
+
+    if [ -d "$FOUND_PREFIX/drive_c" ]; then
+      echo "# Копирование в префикс..." ; sleep 0.5
+      cp -a "$FOUND_PREFIX"/. "$WINEPREFIX/"
+
+      echo "# Инициализация Wine..." ; sleep 0.5
+      WINEDEBUG=-all wine64 wineboot -r
+    else
+      echo "# Ошибка: не найден префикс!" >&2
+    fi
+    echo "90" ; sleep 0.2
+
+    rm -rf "$TMPDIR"
+    echo "# Готово." ; sleep 0.3
+    echo "100"
+  ) | yad --progress \
+          --title="Winbox Snap" \
+          --text="Подготовка среды Wine..." \
+          --center --width=400 \
+          --auto-close --auto-kill
 fi
+
 
 # Ensure Winbox executable is in the prefix (from SNAP prefix)
 WINBOX_EXE="$WINEPREFIX/drive_c/Program Files/Winbox/winbox.exe"
